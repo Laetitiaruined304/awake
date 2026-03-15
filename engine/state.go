@@ -30,10 +30,18 @@ type ActiveSession struct {
 	Command   string    `json:"command"`
 }
 
+// ScheduledWindow is a future session waiting to activate.
+type ScheduledWindow struct {
+	StartsAt time.Time `json:"starts_at"`
+	EndsAt   time.Time `json:"ends_at"`
+	Label    string    `json:"label"`
+}
+
 // State holds runtime session data persisted to disk.
 type State struct {
-	Active  *ActiveSession `json:"active,omitempty"`
-	History []HistoryEntry `json:"history"`
+	Active    *ActiveSession   `json:"active,omitempty"`
+	Scheduled *ScheduledWindow `json:"scheduled,omitempty"`
+	History   []HistoryEntry   `json:"history"`
 }
 
 func statePath() (string, error) {

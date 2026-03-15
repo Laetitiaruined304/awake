@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 
+	"github.com/VolksRat71/awake/daemon"
 	"github.com/VolksRat71/awake/engine"
 	"github.com/VolksRat71/awake/tui"
 	"github.com/spf13/cobra"
@@ -203,6 +205,149 @@ var tuiCmd = &cobra.Command{
 	},
 }
 
+var betweenCmd = &cobra.Command{
+	Use:   "between <start HH:MM> <end HH:MM>",
+	Short: "Schedule an awake window between two times",
+	Args:  cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		startTime, err := engine.ParseUntilTime(args[0])
+		if err != nil {
+			return fmt.Errorf("start time: %w", err)
+		}
+		endTime, err := engine.ParseUntilTime(args[1])
+		if err != nil {
+			return fmt.Errorf("end time: %w", err)
+		}
+
+		// If end is before start, it means end is the next day
+		if endTime.Before(startTime) {
+			endTime = endTime.Add(24 * time.Hour)
+		}
+
+		label, _ := cmd.Flags().GetString("label")
+		if label == "" {
+			label = fmt.Sprintf("%s–%s", args[0], args[1])
+		}
+
+		cfg, st, err := load()
+		if err != nil {
+			return err
+		}
+
+		if err := engine.ScheduleWindow(cfg, st, startTime, endTime, label); err != nil {
+			return err
+		}
+
+		if startTime.Before(time.Now()) || startTime.Equal(time.Now()) {
+			fmt.Printf("Awake now until %s\n", endTime.Format("15:04"))
+		} else {
+			fmt.Printf("Scheduled: %s – %s\n", startTime.Format("15:04"), endTime.Format("15:04"))
+		}
+		return nil
+	},
+}
+
+var daemonCmd = &cobra.Command{
+	Use:   "daemon",
+	Short: "Manage the background daemon",
+}
+
+var daemonRunCmd = &cobra.Command{
+	Use:    "run",
+	Short:  "Run the daemon (usually called by launchd)",
+	Hidden: true,
+	Run: func(cmd *cobra.Command, args []string) {
+		daemon.Run()
+	},
+}
+
+var daemonStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Check if the daemon is running",
+	Run: func(cmd *cobra.Command, args []string) {
+		running, pid := daemon.IsRunning()
+		if running {
+			fmt.Printf("Daemon running (PID %d)\n", pid)
+		} else {
+			fmt.Println("Daemon not running")
+		}
+	},
+}
+
+var installCmd = &cobra.Command{
+	Use:   "install",
+	Short: "Install awake as a system service (launchd)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := daemon.Install(); err != nil {
+			return err
+		}
+
+		plistPath := daemon.PlistPath()
+		fmt.Println("Installed launchd service")
+
+		// Load immediately
+		out, err := exec.Command("launchctl", "load", plistPath).CombinedOutput()
+		if err != nil {
+			fmt.Printf("Plist written to %s\n", plistPath)
+			fmt.Printf("Auto-load failed: %s\nRun manually: launchctl load %s\n", string(out), plistPath)
+			return nil
+		}
+
+		fmt.Println("Daemon started")
+		return nil
+	},
+}
+
+var uninstallCmd = &cobra.Command{
+	Use:   "uninstall",
+	Short: "Remove the awake system service",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		plistPath := daemon.PlistPath()
+		exec.Command("launchctl", "unload", plistPath).Run()
+
+		if err := daemon.Uninstall(); err != nil {
+			return err
+		}
+
+		fmt.Println("Service removed")
+		return nil
+	},
+}
+
+var scheduleCmd = &cobra.Command{
+	Use:   "schedule",
+	Short: "Show or cancel the pending scheduled window",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, st, err := load()
+		if err != nil {
+			return err
+		}
+
+		cancel, _ := cmd.Flags().GetBool("cancel")
+		if cancel {
+			if err := engine.CancelSchedule(st); err != nil {
+				return err
+			}
+			fmt.Println("Scheduled window cancelled")
+			return nil
+		}
+
+		if st.Scheduled == nil {
+			fmt.Println("No scheduled window")
+			return nil
+		}
+
+		w := st.Scheduled
+		lbl := w.Label
+		if lbl != "" {
+			lbl = fmt.Sprintf(" [%s]", lbl)
+		}
+		fmt.Printf("Scheduled: %s – %s%s\n",
+			w.StartsAt.Format("3:04 PM"), w.EndsAt.Format("3:04 PM"), lbl)
+		return nil
+	},
+}
+
 var notifyWatchCmd = &cobra.Command{
 	Use:    "_notify-watch",
 	Hidden: true,
@@ -216,12 +361,21 @@ func init() {
 	rootCmd.PersistentFlags().StringP("label", "l", "", "Session label")
 	rootCmd.PersistentFlags().BoolP("replace", "r", false, "Replace active session instead of erroring")
 	statusCmd.Flags().BoolVar(&jsonFlag, "json", false, "Output as JSON")
+	scheduleCmd.Flags().Bool("cancel", false, "Cancel the pending scheduled window")
+
+	daemonCmd.AddCommand(daemonRunCmd)
+	daemonCmd.AddCommand(daemonStatusCmd)
 
 	rootCmd.AddCommand(untilCmd)
 	rootCmd.AddCommand(workdayCmd)
+	rootCmd.AddCommand(betweenCmd)
 	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(extendCmd)
 	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(scheduleCmd)
+	rootCmd.AddCommand(daemonCmd)
+	rootCmd.AddCommand(installCmd)
+	rootCmd.AddCommand(uninstallCmd)
 	rootCmd.AddCommand(tuiCmd)
 	rootCmd.AddCommand(notifyWatchCmd)
 }

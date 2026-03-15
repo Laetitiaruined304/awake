@@ -21,6 +21,7 @@ const (
 	viewExtend
 	viewHistory
 	viewLabel
+	viewSchedule
 )
 
 type tickMsg time.Time
@@ -43,9 +44,12 @@ type model struct {
 	timeInput     textinput.Model
 	labelInput    textinput.Model
 
-	pendingOpts   *engine.StartOpts
-	extendCursor  int
-	historyOffset int
+	pendingOpts    *engine.StartOpts
+	extendCursor   int
+	historyOffset  int
+	schedStartInput textinput.Model
+	schedEndInput   textinput.Model
+	schedFocusEnd   bool
 
 	width  int
 	height int
@@ -70,14 +74,26 @@ func newModel(cfg *engine.Config, state *engine.State) model {
 	li.CharLimit = 30
 	li.Width = 30
 
+	si := textinput.New()
+	si.Placeholder = "HH:MM"
+	si.CharLimit = 5
+	si.Width = 10
+
+	ei := textinput.New()
+	ei.Placeholder = "HH:MM"
+	ei.CharLimit = 5
+	ei.Width = 10
+
 	return model{
 		cfg:           cfg,
 		state:         state,
 		status:        engine.GetStatus(cfg, state),
-		view:          viewDashboard,
-		durationInput: di,
-		timeInput:     ti,
-		labelInput:    li,
+		view:            viewDashboard,
+		durationInput:   di,
+		timeInput:       ti,
+		labelInput:      li,
+		schedStartInput: si,
+		schedEndInput:   ei,
 	}
 }
 
@@ -115,6 +131,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateHistory(msg)
 		case viewLabel:
 			return m.updateLabel(msg)
+		case viewSchedule:
+			return m.updateSchedule(msg)
 		}
 	}
 
@@ -160,6 +178,13 @@ func (m model) updateDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.view = viewHistory
 		m.historyOffset = 0
 		return m, nil
+	case "s":
+		m.view = viewSchedule
+		m.schedStartInput.Reset()
+		m.schedEndInput.Reset()
+		m.schedFocusEnd = false
+		m.schedStartInput.Focus()
+		return m, textinput.Blink
 	}
 	return m, nil
 }
@@ -344,6 +369,72 @@ func (m model) updateHistory(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// --- Schedule ---
+
+func (m model) updateSchedule(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.view = viewDashboard
+		return m, nil
+	case "tab":
+		m.schedFocusEnd = !m.schedFocusEnd
+		if m.schedFocusEnd {
+			m.schedStartInput.Blur()
+			m.schedEndInput.Focus()
+		} else {
+			m.schedEndInput.Blur()
+			m.schedStartInput.Focus()
+		}
+		return m, textinput.Blink
+	case "enter":
+		startVal := m.schedStartInput.Value()
+		endVal := m.schedEndInput.Value()
+
+		startTime, err := engine.ParseUntilTime(startVal)
+		if err != nil {
+			m.errMsg = fmt.Sprintf("start: %s", err.Error())
+			return m, nil
+		}
+		endTime, err := engine.ParseUntilTime(endVal)
+		if err != nil {
+			m.errMsg = fmt.Sprintf("end: %s", err.Error())
+			return m, nil
+		}
+		if endTime.Before(startTime) {
+			endTime = endTime.Add(24 * time.Hour)
+		}
+
+		label := fmt.Sprintf("%s–%s", startVal, endVal)
+		if err := engine.ScheduleWindow(m.cfg, m.state, startTime, endTime, label); err != nil {
+			m.errMsg = err.Error()
+		} else {
+			m.successMsg = fmt.Sprintf("Scheduled %s – %s", startVal, endVal)
+		}
+		m.status = engine.GetStatus(m.cfg, m.state)
+		m.view = viewDashboard
+		return m, nil
+	case "d":
+		// Cancel pending schedule
+		if m.state.Scheduled != nil {
+			if err := engine.CancelSchedule(m.state); err != nil {
+				m.errMsg = err.Error()
+			} else {
+				m.successMsg = "Scheduled window cancelled"
+			}
+			m.view = viewDashboard
+			return m, nil
+		}
+	}
+
+	var cmd tea.Cmd
+	if m.schedFocusEnd {
+		m.schedEndInput, cmd = m.schedEndInput.Update(msg)
+	} else {
+		m.schedStartInput, cmd = m.schedStartInput.Update(msg)
+	}
+	return m, cmd
+}
+
 // --- Label ---
 
 func (m model) updateLabel(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -403,6 +494,8 @@ func (m model) View() string {
 		return m.viewHistory()
 	case viewLabel:
 		return m.viewLabel()
+	case viewSchedule:
+		return m.viewSchedule()
 	}
 	return ""
 }
@@ -461,12 +554,21 @@ func (m model) viewDashboard() string {
 	sched := fmt.Sprintf("%s %s–%s", days, m.cfg.Workday.Start, m.cfg.Workday.End)
 	b.WriteString(fmt.Sprintf("  %s  %s\n", labelStyle.Render("Schedule"), valueStyle.Render(sched)))
 
+	if m.state.Scheduled != nil {
+		w := m.state.Scheduled
+		nextStr := fmt.Sprintf("%s – %s", w.StartsAt.Format("3:04 PM"), w.EndsAt.Format("3:04 PM"))
+		if w.Label != "" {
+			nextStr = fmt.Sprintf("%s [%s]", nextStr, w.Label)
+		}
+		b.WriteString(fmt.Sprintf("  %s  %s\n", labelStyle.Render("Next    "), valueStyle.Render(nextStr)))
+	}
+
 	m.writeMessages(&b)
 
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("  %s presets   %s custom   %s extend\n",
-		hotkeyStyle.Render("p"), hotkeyStyle.Render("c"), hotkeyStyle.Render("e")))
-	b.WriteString(fmt.Sprintf("  %s history   %s stop     %s quit\n",
+	b.WriteString(fmt.Sprintf("  %s presets  %s custom  %s extend  %s schedule\n",
+		hotkeyStyle.Render("p"), hotkeyStyle.Render("c"), hotkeyStyle.Render("e"), hotkeyStyle.Render("s")))
+	b.WriteString(fmt.Sprintf("  %s history  %s stop    %s quit\n",
 		hotkeyStyle.Render("h"), hotkeyStyle.Render("x"), hotkeyStyle.Render("q")))
 
 	b.WriteString("\n")
@@ -609,6 +711,43 @@ func (m model) viewLabel() string {
 
 	b.WriteString(fmt.Sprintf("\n  %s start   %s cancel\n",
 		hotkeyStyle.Render("enter"), hotkeyStyle.Render("esc")))
+
+	return borderStyle.Width(m.boxWidth()).Render(b.String())
+}
+
+func (m model) viewSchedule() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("SCHEDULE WINDOW") + "\n\n")
+
+	if m.state.Scheduled != nil {
+		w := m.state.Scheduled
+		b.WriteString(fmt.Sprintf("  %s  %s – %s",
+			labelStyle.Render("Pending"),
+			valueStyle.Render(w.StartsAt.Format("3:04 PM")),
+			valueStyle.Render(w.EndsAt.Format("3:04 PM"))))
+		if w.Label != "" {
+			b.WriteString(fmt.Sprintf("  %s", labelStyle.Render("["+w.Label+"]")))
+		}
+		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf("  Press %s to cancel this window\n", hotkeyStyle.Render("d")))
+		b.WriteString("\n")
+	}
+
+	startMark := selectedStyle.Render("▸")
+	endMark := labelStyle.Render(" ")
+	if m.schedFocusEnd {
+		startMark = labelStyle.Render(" ")
+		endMark = selectedStyle.Render("▸")
+	}
+
+	b.WriteString(fmt.Sprintf("  %s Start: %s\n", startMark, m.schedStartInput.View()))
+	b.WriteString(fmt.Sprintf("  %s End:   %s\n", endMark, m.schedEndInput.View()))
+
+	m.writeMessages(&b)
+
+	b.WriteString(fmt.Sprintf("\n  %s switch   %s schedule   %s back\n",
+		hotkeyStyle.Render("tab"), hotkeyStyle.Render("enter"), hotkeyStyle.Render("esc")))
 
 	return borderStyle.Width(m.boxWidth()).Render(b.String())
 }

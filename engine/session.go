@@ -251,6 +251,95 @@ func GetStatus(cfg *Config, st *State) StatusInfo {
 	}
 }
 
+// ScheduleWindow sets up a future awake session. If the current session already
+// covers the requested window, it returns an informational error. If the current
+// session partially overlaps, the window is accepted for the uncovered portion.
+func ScheduleWindow(cfg *Config, st *State, startsAt, endsAt time.Time, label string) error {
+	now := time.Now()
+
+	if endsAt.Before(startsAt) {
+		return fmt.Errorf("end time must be after start time")
+	}
+	if endsAt.Before(now) {
+		return fmt.Errorf("window has already passed")
+	}
+
+	// Check if active session already covers this window
+	if IsActive(st) {
+		if st.Active.EndsAt.After(endsAt) || st.Active.EndsAt.Equal(endsAt) {
+			return fmt.Errorf("current session already covers this window (ends %s)",
+				st.Active.EndsAt.Format("3:04 PM"))
+		}
+	}
+
+	// If window starts now or in the past, start it immediately
+	if !startsAt.After(now) {
+		if IsActive(st) {
+			// Extend current session to cover the window
+			extraMin := int(endsAt.Sub(st.Active.EndsAt).Minutes()) + 1
+			return ExtendSession(cfg, st, extraMin)
+		}
+		return StartSession(cfg, st, StartOpts{
+			Until: endsAt,
+			Mode:  "scheduled",
+			Label: label,
+		})
+	}
+
+	// Future window — persist it for the daemon to activate
+	st.Scheduled = &ScheduledWindow{
+		StartsAt: startsAt,
+		EndsAt:   endsAt,
+		Label:    label,
+	}
+
+	if err := st.Save(); err != nil {
+		return fmt.Errorf("failed to save scheduled window: %w", err)
+	}
+
+	if cfg.Notifications.Enabled {
+		msg := fmt.Sprintf("Scheduled %s – %s", startsAt.Format("3:04 PM"), endsAt.Format("3:04 PM"))
+		if label != "" {
+			msg = fmt.Sprintf("[%s] %s", label, msg)
+		}
+		Notify("Awake", msg)
+	}
+
+	return nil
+}
+
+// CancelSchedule removes a pending scheduled window.
+func CancelSchedule(st *State) error {
+	if st.Scheduled == nil {
+		return fmt.Errorf("no scheduled window")
+	}
+	st.Scheduled = nil
+	return st.Save()
+}
+
+// ActivateScheduled is called by the daemon when a scheduled window's start
+// time arrives. It starts the session and clears the schedule.
+func ActivateScheduled(cfg *Config, st *State) error {
+	if st.Scheduled == nil {
+		return fmt.Errorf("no scheduled window to activate")
+	}
+
+	window := st.Scheduled
+	st.Scheduled = nil
+	st.Save()
+
+	opts := StartOpts{
+		Until: window.EndsAt,
+		Mode:  "scheduled",
+		Label: window.Label,
+	}
+
+	if IsActive(st) {
+		return ForceReplace(cfg, st, opts)
+	}
+	return StartSession(cfg, st, opts)
+}
+
 // ParseUntilTime parses "HH:MM" into a time.Time for today, rolling to tomorrow if past.
 func ParseUntilTime(timeStr string) (time.Time, error) {
 	now := time.Now()
