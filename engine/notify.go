@@ -43,26 +43,20 @@ func InstallNotifierApp() error {
 	}
 
 	dest := awakeAppPath()
-
-	// Remove old copy
 	os.RemoveAll(dest)
 
-	// Copy terminal-notifier.app → Awake.app
 	if out, err := exec.Command("cp", "-R", tnPath, dest).CombinedOutput(); err != nil {
 		return fmt.Errorf("copy failed: %s", string(out))
 	}
 
-	// Convert our PNG to icns
 	icnsPath := filepath.Join(dest, "Contents", "Resources", "Awake.icns")
 	if err := pngToIcns(iconPath(), icnsPath); err != nil {
 		return fmt.Errorf("icon conversion failed: %w", err)
 	}
 
-	// Remove the old icon
 	oldIcon := filepath.Join(dest, "Contents", "Resources", "Terminal.icns")
 	os.Remove(oldIcon)
 
-	// Update Info.plist
 	plistPath := filepath.Join(dest, "Contents", "Info.plist")
 	plistUpdates := map[string]string{
 		"CFBundleName":       "Awake",
@@ -74,20 +68,20 @@ func InstallNotifierApp() error {
 			fmt.Sprintf("Set :%s %s", key, val), plistPath).Run()
 	}
 
-	// Touch the app so macOS picks up the new icon
 	exec.Command("touch", dest).Run()
+
+	// Register the app with macOS by opening it once — this triggers the
+	// notification permission prompt and registers the bundle ID.
+	exec.Command("open", dest).Run()
 
 	return nil
 }
 
-// findTerminalNotifierApp locates the .app bundle.
 func findTerminalNotifierApp() (string, error) {
-	// Check homebrew cellar
 	matches, _ := filepath.Glob("/opt/homebrew/Cellar/terminal-notifier/*/terminal-notifier.app")
 	if len(matches) > 0 {
 		return matches[len(matches)-1], nil
 	}
-	// Check /usr/local for Intel macs
 	matches, _ = filepath.Glob("/usr/local/Cellar/terminal-notifier/*/terminal-notifier.app")
 	if len(matches) > 0 {
 		return matches[len(matches)-1], nil
@@ -95,7 +89,6 @@ func findTerminalNotifierApp() (string, error) {
 	return "", fmt.Errorf("not found in homebrew cellar")
 }
 
-// pngToIcns converts a PNG to icns via iconutil.
 func pngToIcns(pngPath, icnsPath string) error {
 	tmpDir, err := os.MkdirTemp("", "awake-icon")
 	if err != nil {
@@ -106,7 +99,6 @@ func pngToIcns(pngPath, icnsPath string) error {
 	iconsetDir := filepath.Join(tmpDir, "Awake.iconset")
 	os.MkdirAll(iconsetDir, 0755)
 
-	// Generate all required sizes
 	sizes := []struct {
 		name string
 		px   int
@@ -140,35 +132,29 @@ func pngToIcns(pngPath, icnsPath string) error {
 	return nil
 }
 
-// Notify sends a macOS notification. Prefers the custom Awake.app for
-// branded notifications, falls back to terminal-notifier, then osascript.
+// Notify sends a macOS notification. Uses the custom Awake.app for branded
+// notifications when available, falls back to osascript.
+// Runs in a goroutine so it never blocks the caller.
 func Notify(title, message string) {
-	// Try custom Awake.app first
-	bin := awakeAppBinary()
-	if _, err := os.Stat(bin); err == nil {
-		exec.Command(bin,
-			"-title", title,
-			"-message", message,
-			"-group", "com.awake",
-			"-sound", "default",
-		).Run()
-		return
-	}
+	go func() {
+		// Try Awake.app — use open -a to launch it properly through macOS
+		// so it gets full notification permissions
+		appPath := awakeAppPath()
+		if _, err := os.Stat(appPath); err == nil {
+			exec.Command(awakeAppBinary(),
+				"-title", title,
+				"-message", message,
+				"-group", "com.awake",
+				"-sound", "default",
+				"-sender", "com.awake.notifier",
+			).Run()
+			return
+		}
 
-	// Fall back to system terminal-notifier
-	if tn, err := exec.LookPath("terminal-notifier"); err == nil {
-		exec.Command(tn,
-			"-title", title,
-			"-message", message,
-			"-group", "com.awake",
-			"-sound", "default",
-		).Run()
-		return
-	}
-
-	// Last resort: osascript
-	script := fmt.Sprintf(`display notification %q with title %q`, message, title)
-	exec.Command("osascript", "-e", script).Run()
+		// Fall back to osascript
+		script := fmt.Sprintf(`display notification %q with title %q sound name "default"`, message, title)
+		exec.Command("osascript", "-e", script).Run()
+	}()
 }
 
 func watcherPidPath() string {
@@ -176,8 +162,6 @@ func watcherPidPath() string {
 	return filepath.Join(home, configDir, "watcher.pid")
 }
 
-// startNotifyWatcher spawns a background process that sends notifications
-// at warn time and session end.
 func startNotifyWatcher(endsAt time.Time, warnMinutes int, label string) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -202,7 +186,6 @@ func startNotifyWatcher(endsAt time.Time, warnMinutes int, label string) {
 	}
 }
 
-// killNotifyWatcher terminates a previously spawned watcher process.
 func killNotifyWatcher() {
 	data, err := os.ReadFile(watcherPidPath())
 	if err != nil {
@@ -220,7 +203,6 @@ func killNotifyWatcher() {
 	os.Remove(watcherPidPath())
 }
 
-// RunNotifyWatcher is the entry point for the hidden _notify-watch subprocess.
 func RunNotifyWatcher(endsAtStr string, warnMinutesStr string, label string) {
 	endsAt, err := time.Parse(time.RFC3339, endsAtStr)
 	if err != nil {

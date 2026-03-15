@@ -305,20 +305,24 @@ var installCmd = &cobra.Command{
 			fmt.Println("\nInstalling terminal-notifier for notifications...")
 			if out, err := exec.Command("brew", "install", "terminal-notifier").CombinedOutput(); err != nil {
 				fmt.Printf("Could not install terminal-notifier: %s\n", string(out))
-				fmt.Println("Notifications will work but without the awake icon.")
-				fmt.Println("Install manually: brew install terminal-notifier")
-				return nil
+				fmt.Println("Notifications will still work via osascript.")
+			} else {
+				fmt.Println("terminal-notifier installed")
 			}
-			fmt.Println("terminal-notifier installed")
 		}
 
-		fmt.Println("Building Awake.app notification bundle...")
-		if err := engine.InstallNotifierApp(); err != nil {
-			fmt.Printf("Warning: %v\n", err)
-			fmt.Println("Notifications will work but with the default terminal-notifier icon.")
-		} else {
-			fmt.Println("Awake.app created — notifications will show the awake icon")
+		if _, err := exec.LookPath("terminal-notifier"); err == nil {
+			fmt.Println("Building Awake.app notification bundle...")
+			if err := engine.InstallNotifierApp(); err != nil {
+				fmt.Printf("Warning: %v\n", err)
+				fmt.Println("Notifications will work via osascript.")
+			} else {
+				fmt.Println("Awake.app created — notifications will show the awake icon")
+			}
 		}
+
+		// Give Awake.app a moment to register with macOS
+		time.Sleep(2 * time.Second)
 
 		if freshInstall {
 			engine.Notify("Awake", "Thanks for the download! Support FOSS by starring the repo ✌️")

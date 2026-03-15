@@ -27,7 +27,7 @@ class Awake < Formula
 
   def caveats
     <<~EOS
-      The daemon and notification icon were set up automatically.
+      The daemon and notifications were set up automatically.
 
       To start a session:
         awake 60            # 60 minutes
