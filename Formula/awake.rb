@@ -21,10 +21,13 @@ class Awake < Formula
     bin.install "awake"
   end
 
+  def post_install
+    system bin/"awake", "install"
+  end
+
   def caveats
     <<~EOS
-      To set up the daemon and notification icon, run:
-        awake install
+      The daemon and notification icon were set up automatically.
 
       To start a session:
         awake 60            # 60 minutes
