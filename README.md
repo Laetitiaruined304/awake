@@ -8,20 +8,25 @@ A macOS utility that keeps your Mac from sleeping. Uses `caffeinate` under the h
 
 ## Install
 
+Requires **macOS** and **Go 1.22+**. [Homebrew](https://brew.sh) is recommended for notification support.
+
 ```bash
 # Clone and build
 git clone https://github.com/VolksRat71/awake.git
 cd awake
 go build -o awake .
 
-# Move to PATH
-sudo mv awake /usr/local/bin/
+# Add to PATH
+sudo cp awake /usr/local/bin/
 
-# Start on boot (launchd daemon)
+# Set up daemon, notifications, and app icon
 awake install
 ```
 
-The daemon runs in the background, polling every 30 seconds to activate scheduled windows and clean up expired sessions. It starts automatically on boot after `awake install`.
+`awake install` does three things:
+1. Creates a **launchd service** so the daemon starts on boot
+2. Installs **terminal-notifier** via Homebrew (if not present) for rich notifications
+3. Builds a custom **Awake.app** bundle with the awake icon for branded notifications
 
 ## CLI
 
@@ -163,22 +168,25 @@ awake uninstall        # Remove the service
 
 ## Notifications
 
-When enabled, awake sends macOS notifications:
+When enabled, awake sends macOS notifications with the app icon:
 
 - **Session started** — with duration and label
 - **Warning** — N minutes before session ends
 - **Session ended** — when the timer expires or you stop it
 
-A background watcher process handles the timing so notifications work even when the TUI isn't open.
+A background watcher process handles the timing so notifications work even when the TUI isn't open. Uses standard macOS notification sounds and respects Focus/Do Not Disturb modes.
 
 ## How it works
 
 `awake` is a control plane around macOS's built-in `/usr/bin/caffeinate`. Every session spawns a `caffeinate` process with a timeout flag (`-t`). Extending a session kills the old process and starts a new one with the adjusted duration. The daemon and CLI both read/write the same state file, so there's always one source of truth.
 
-## Requirements
+## Uninstall
 
-- macOS (uses `caffeinate` and `launchd`)
-- Go 1.22+
+```bash
+awake uninstall                    # Remove the launchd service
+sudo rm /usr/local/bin/awake       # Remove the binary
+rm -rf ~/.config/awake             # Remove config, state, and Awake.app
+```
 
 ## License
 
