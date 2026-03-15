@@ -7,10 +7,10 @@ class Awake < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/VolksRat71/awake/releases/download/v1.0.0/awake-v1.0.0-darwin-arm64.tar.gz"
-      sha256 "PLACEHOLDER_ARM64_SHA256"
+      sha256 "7e89c51e3b902d7bdff225d9f187bcd866a6b6258f55d535d0a50167ba3c06f0"
     else
       url "https://github.com/VolksRat71/awake/releases/download/v1.0.0/awake-v1.0.0-darwin-amd64.tar.gz"
-      sha256 "PLACEHOLDER_AMD64_SHA256"
+      sha256 "0e2fb9fc66b9b26d2df88ee3c37196ea1e178081e479acf68950ee59330f1cf7"
     end
   end
 
