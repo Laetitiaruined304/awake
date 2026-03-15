@@ -10,8 +10,45 @@ import (
 	"time"
 )
 
-// Notify sends a macOS notification via osascript.
+func iconPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, configDir, "icon.png")
+}
+
+// EnsureIcon writes the embedded icon to the config directory if not present.
+func EnsureIcon(data []byte) {
+	path := iconPath()
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+	os.MkdirAll(filepath.Dir(path), 0755)
+	os.WriteFile(path, data, 0644)
+}
+
+// hasTerminalNotifier checks if terminal-notifier is on PATH.
+func hasTerminalNotifier() bool {
+	_, err := exec.LookPath("terminal-notifier")
+	return err == nil
+}
+
+// Notify sends a macOS notification. Uses terminal-notifier with the app
+// icon when available, falls back to osascript.
 func Notify(title, message string) {
+	if hasTerminalNotifier() {
+		args := []string{
+			"-title", title,
+			"-message", message,
+			"-group", "com.awake",
+			"-sound", "default",
+		}
+		icon := iconPath()
+		if _, err := os.Stat(icon); err == nil {
+			args = append(args, "-appIcon", icon)
+		}
+		exec.Command("terminal-notifier", args...).Run()
+		return
+	}
+
 	script := fmt.Sprintf(`display notification %q with title %q`, message, title)
 	exec.Command("osascript", "-e", script).Run()
 }

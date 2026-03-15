@@ -294,6 +294,19 @@ var installCmd = &cobra.Command{
 		}
 
 		fmt.Println("Daemon started")
+
+		// Install terminal-notifier for rich notifications with icon
+		if _, err := exec.LookPath("terminal-notifier"); err != nil {
+			fmt.Println("\nInstalling terminal-notifier for notification icons...")
+			if out, err := exec.Command("brew", "install", "terminal-notifier").CombinedOutput(); err != nil {
+				fmt.Printf("Could not install terminal-notifier: %s\n", string(out))
+				fmt.Println("Notifications will work but without the app icon.")
+				fmt.Println("Install manually: brew install terminal-notifier")
+			} else {
+				fmt.Println("terminal-notifier installed")
+			}
+		}
+
 		return nil
 	},
 }
