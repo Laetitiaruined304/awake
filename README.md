@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.png" width="128" />
+</p>
+
 # awake
 
 A macOS utility that keeps your Mac from sleeping. Uses `caffeinate` under the hood with a fast CLI for muscle memory and a terminal UI for when you want a control panel.
