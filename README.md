@@ -13,9 +13,10 @@ A macOS utility that keeps your Mac from sleeping. Uses `caffeinate` under the h
 ```bash
 brew tap VolksRat71/awake https://github.com/VolksRat71/awake
 brew install awake
+awake install
 ```
 
-That's it. Homebrew installs the binary, sets up the daemon, and configures notifications automatically.
+Homebrew installs the binary. `awake install` sets up the daemon, notifications, and walks you through enabling permissions.
 
 ### GitHub Release
 

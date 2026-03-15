@@ -21,15 +21,12 @@ class Awake < Formula
     bin.install "awake"
   end
 
-  def post_install
-    system bin/"awake", "install"
-  end
-
   def caveats
     <<~EOS
-      The daemon and notifications were set up automatically.
+      Run the setup to configure the daemon and notifications:
+        awake install
 
-      To start a session:
+      Then start a session:
         awake 60            # 60 minutes
         awake until 17:00   # until 5 PM
         awake               # open the TUI
