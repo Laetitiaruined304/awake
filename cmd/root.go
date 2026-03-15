@@ -278,6 +278,11 @@ var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install awake as a system service (launchd)",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Detect fresh install before LoadConfig creates defaults
+		configPath, _ := engine.ConfigPath()
+		_, statErr := os.Stat(configPath)
+		freshInstall := statErr != nil // true if config didn't exist yet
+
 		if err := daemon.Install(); err != nil {
 			return err
 		}
@@ -313,6 +318,10 @@ var installCmd = &cobra.Command{
 			fmt.Println("Notifications will work but with the default terminal-notifier icon.")
 		} else {
 			fmt.Println("Awake.app created — notifications will show the awake icon")
+		}
+
+		if freshInstall {
+			engine.Notify("Awake", "Thanks for the download! Support FOSS by starring the repo ✌️")
 		}
 
 		return nil
