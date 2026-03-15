@@ -8,18 +8,33 @@ A macOS utility that keeps your Mac from sleeping. Uses `caffeinate` under the h
 
 ## Install
 
-Requires **macOS** and **Go 1.22+**. [Homebrew](https://brew.sh) is recommended for notification support.
+### Homebrew (recommended)
 
 ```bash
-# Clone and build
+brew tap VolksRat71/awake https://github.com/VolksRat71/awake
+brew install awake
+awake install
+```
+
+### Binary release
+
+Download the latest release from [GitHub Releases](https://github.com/VolksRat71/awake/releases), then:
+
+```bash
+tar xzf awake-*.tar.gz
+sudo cp awake /usr/local/bin/
+awake install
+```
+
+### From source
+
+Requires Go 1.22+.
+
+```bash
 git clone https://github.com/VolksRat71/awake.git
 cd awake
 go build -o awake .
-
-# Add to PATH
 sudo cp awake /usr/local/bin/
-
-# Set up daemon, notifications, and app icon
 awake install
 ```
 

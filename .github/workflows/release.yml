@@ -51,14 +51,39 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
+          path: dist
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            awake-*.tar.gz
-            awake-*.sha256
+            dist/awake-*.tar.gz
+            dist/awake-*.sha256
+
+      - name: Update Homebrew formula
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          ARM64_SHA=$(cat dist/awake-*-darwin-arm64.tar.gz.sha256 | awk '{print $1}')
+          AMD64_SHA=$(cat dist/awake-*-darwin-amd64.tar.gz.sha256 | awk '{print $1}')
+
+          sed -i "s|version \".*\"|version \"${TAG#v}\"|" Formula/awake.rb
+          sed -i "s|/download/v[^/]*/awake-v[^-]*-darwin-arm64|/download/${TAG}/awake-${TAG}-darwin-arm64|" Formula/awake.rb
+          sed -i "s|/download/v[^/]*/awake-v[^-]*-darwin-amd64|/download/${TAG}/awake-${TAG}-darwin-amd64|" Formula/awake.rb
+          sed -i "s|sha256 \"PLACEHOLDER_ARM64_SHA256\"|sha256 \"${ARM64_SHA}\"|" Formula/awake.rb
+          sed -i "s|sha256 \"PLACEHOLDER_AMD64_SHA256\"|sha256 \"${AMD64_SHA}\"|" Formula/awake.rb
+          # Also handle updates to existing real hashes
+          sed -i "/darwin-arm64/{n;s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${ARM64_SHA}\"|;}" Formula/awake.rb
+          sed -i "/darwin-amd64/{n;s|sha256 \"[a-f0-9]\{64\}\"|sha256 \"${AMD64_SHA}\"|;}" Formula/awake.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/awake.rb
+          git commit -m "chore: update Homebrew formula for ${TAG}" || true
+          git push origin HEAD:main
